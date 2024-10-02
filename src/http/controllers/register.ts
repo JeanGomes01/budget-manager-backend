@@ -9,7 +9,6 @@ export async function register(request: FastifyRequest, reply: FastifyReply) {
     email: z.string().email(),
     password: z.string().min(6),
   });
-
   const { email, password } = registerBodySchema.parse(request.body);
 
   const existingUser = await prisma.user.findUnique({
