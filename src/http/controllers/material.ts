@@ -17,6 +17,7 @@ export async function createMaterial(
   // Criação do material no banco de dados
   const material = await prisma.material.create({
     data: {
+      userId: request.userId,
       name,
       value,
     },
@@ -68,10 +69,17 @@ export async function deleteMaterial(
       id,
     },
   });
-  return reply.status(200).send({
-    message: "O material foi excluído com sucesso !!",
-    data: deletedMaterial,
-  });
+  try {
+    return reply.status(200).send({
+      message: "O material foi excluído com sucesso !!",
+      data: deletedMaterial,
+    });
+  } catch (error) {
+    return reply.status(400).send({
+      message: "Erro ao excluir o material, verifique se o ID existe !!",
+      data: error,
+    });
+  }
 }
 
 export async function listMaterials(
@@ -80,6 +88,7 @@ export async function listMaterials(
 ) {
   const materials = await prisma.material.findMany({
     where: {
+      userId: request.userId,
       deleted: false,
     },
   });
@@ -88,3 +97,19 @@ export async function listMaterials(
     data: materials,
   });
 }
+
+export const getMaterialData = async (
+  request: FastifyRequest,
+  reply: FastifyReply
+) => {
+  try {
+    if (!request.userId) {
+      return reply.status(401).send({ message: "Material não encontrado" });
+    }
+    return reply.send(request.userId);
+  } catch (error) {
+    return reply
+      .status(500)
+      .send({ error: "Erro ao buscar dados do material" });
+  }
+};

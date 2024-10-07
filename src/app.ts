@@ -1,16 +1,19 @@
+import dotenv from "dotenv";
 import fastify from "fastify";
 import {
+  authRoutes,
   budgetRoutes,
   clientRoutes,
   materialRoutes,
   userRoutes,
 } from "./http/routes";
-import { authMiddleware } from "./middleware/authMiddleware";
+
+dotenv.config();
 
 export const app = fastify();
-app.register(authMiddleware);
 
-app.register(userRoutes, { preHandler: authMiddleware });
-app.register(clientRoutes, { preHandler: authMiddleware });
-app.register(materialRoutes, { preHandler: authMiddleware });
-app.register(budgetRoutes, { preHandler: authMiddleware });
+app.register(userRoutes);
+app.register(clientRoutes);
+app.register(materialRoutes);
+app.register(budgetRoutes);
+app.register(authRoutes);

@@ -2,71 +2,70 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma"; // Certifique-se de que o caminho para o prisma está correto
 
-export async function createBudget(
+export async function createBudgetRoutes(
   request: FastifyRequest,
   reply: FastifyReply
 ) {
   const createBudgetSchema = z.object({
     clientId: z.number(),
-    materials: z.array(z.number()),
-    finalized: z.boolean().optional(),
+    materials: z.array(
+      z.object({
+        materialId: z.number(),
+        quantity: z.number(),
+      })
+    ),
   });
 
-  const parseBody = createBudgetSchema.safeParse(request.body);
+  const { clientId, materials } = createBudgetSchema.parse(request.body);
+  console.log(`Client ID received: ${clientId}`);
 
-  if (!parseBody.success) {
-    return reply.status(400).send({
-      error: "Invalid data",
-      details: parseBody.error.errors,
-    });
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+  });
+
+  if (!client) {
+    return reply.status(404).send({ error: "Client not found" });
   }
 
-  const { clientId, materials, finalized = false } = parseBody.data;
+  let totalValue = 0;
 
-  try {
-    // Verifique se o cliente existe
-    const clientExists = await prisma.client.findUnique({
-      where: { id: clientId },
-    });
-
-    if (!clientExists) {
-      return reply.status(400).send({
-        error: "Client does not exist",
-        details: { clientId },
+  const budgetMaterials = await Promise.all(
+    materials.map(async ({ materialId, quantity }) => {
+      const material = await prisma.material.findUnique({
+        where: { id: materialId },
       });
-    }
 
-    // Verifique se todos os materiais existem
-    const existingMaterials = await prisma.material.findMany({
-      where: { id: { in: materials } },
-    });
+      if (!material) {
+        return reply.status(404).send({ error: "Material not found" });
+      }
 
-    if (existingMaterials.length !== materials.length) {
-      return reply.status(400).send({
-        error: "Some materials do not exist",
-        details: materials.filter(
-          (id) => !existingMaterials.some((m) => m.id === id)
-        ),
-      });
-    }
+      totalValue += material.value * quantity;
 
-    const budget = await prisma.budget.create({
-      data: {
-        clientId,
-        finalized,
-        materials: {
-          connect: materials.map((materialId) => ({ id: materialId })),
-        },
+      return {
+        materialId: material.id,
+        quantity,
+        priceAtCreation: material.value,
+      };
+    })
+  );
+  const newBudget = await prisma.budget.create({
+    data: {
+      clientId: clientId,
+      finalized: false,
+      BudgetMaterial: {
+        create: budgetMaterials.map((bm) => ({
+          materialId: bm.materialId,
+          quantity: bm.quantity,
+          priceAtCreation: bm.priceAtCreation,
+        })),
       },
-    });
+    },
+    include: {
+      BudgetMaterial: true,
+    },
+  });
 
-    return reply.status(201).send(budget);
-  } catch (error) {
-    return reply.status(500).send({
-      error: "Failed to create budget",
-      details: (error as Error).message,
-    });
-  }
+  return reply.status(201).send(newBudget);
 }
 
 export async function listBudget(request: FastifyRequest, reply: FastifyReply) {

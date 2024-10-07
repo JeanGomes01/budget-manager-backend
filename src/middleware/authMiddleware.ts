@@ -1,47 +1,33 @@
 // src/http/middleware/authMiddleware.ts
 
-import fastifyJWT from "@fastify/jwt"; // Importar o módulo @fastify/jwt
-import {
-  FastifyInstance,
-  FastifyPluginAsync,
-  FastifyReply,
-  FastifyRequest,
-} from "fastify";
+import { FastifyReply, FastifyRequest, HookHandlerDoneFunction } from "fastify";
+import jwt from "jsonwebtoken";
 import { JWTUserPayload } from "../@types/jwt.Payload";
 
-const authMiddleware: FastifyPluginAsync = async (app: FastifyInstance) => {
-  // Registrar o plugin @fastify/jwt
-  app.register(fastifyJWT, {
-    secret: process.env.JWT_SECRET || "my$up3rS3cureK3y!12345",
-  });
+function ensureAuthenticated(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  done: HookHandlerDoneFunction
+) {
+  const token = request.headers["authorization"]?.split(" ")[1];
 
-  // Decorar a instância do Fastify com o método authenticate
-  app.addHook(
-    "onRequest",
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const authHeader = request.headers["authorization"];
-      if (!authHeader || !authHeader.startsWith("Bearer")) {
-        return reply.status(400).send({ message: "Token não fornecido" });
-      }
+  if (!token) {
+    return reply.code(401).send({ Error: "Token not provided" });
+  }
+  try {
+    const decodedToken = jwt.verify(
+      token,
+      process.env.JWT_SECRET || "my$up3rS3cureK3y!12345"
+    ) as JWTUserPayload;
 
-      try {
-        const decodedToken = (await request.jwtVerify()) as JWTUserPayload; // Verifica o token e decodifica
+    request.userId = decodedToken.userId;
+    console.log("USER ID", request.userId);
 
-        request.currentUser = decodedToken;
-      } catch (err: unknown) {
-        if (err instanceof Error) {
-          reply
-            .status(401)
-            .send({ message: "Token inválido", error: err.message });
-        } else {
-          reply
-            .status(401)
-            .send({ message: "Token inválido", error: "Erro desconhecido" });
-        }
-      }
-    }
-  );
+    console.log(decodedToken);
+  } catch (error) {
+    reply.code(401).send({ Error: "Token invalid" });
+  }
+  done();
+}
 
-  console.log("authMiddleware registered.");
-};
-export { authMiddleware };
+export { ensureAuthenticated };

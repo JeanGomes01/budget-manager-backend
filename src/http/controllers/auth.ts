@@ -9,15 +9,15 @@ const JWT_SECRET = process.env.JWT_SECRET || "my$up3rS3cureK3y!12345"; // Use um
 
 export async function login(request: FastifyRequest, reply: FastifyReply) {
   const loginBodySchema = z.object({
-    username: z.string(),
+    email: z.string(),
     password: z.string().min(6),
   });
 
-  const { username, password } = loginBodySchema.parse(request.body);
+  const { email, password } = loginBodySchema.parse(request.body);
 
   // Buscar o usuário no banco de dados
   const user = await prisma.user.findUnique({
-    where: { username },
+    where: { email },
   });
 
   if (!user) {
@@ -31,11 +31,9 @@ export async function login(request: FastifyRequest, reply: FastifyReply) {
   }
 
   // Gerar o token JWT
-  const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, {
+  const token = jwt.sign({ id: user.id, username: user.email }, JWT_SECRET, {
     expiresIn: "10d",
   });
 
   return reply.send({ token, user });
 }
-
-

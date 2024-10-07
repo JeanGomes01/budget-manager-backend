@@ -2,7 +2,11 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma";
 
-export async function clients(request: FastifyRequest, reply: FastifyReply) {
+export async function createClient(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  console.log("Create Cliente", createClient);
   const clientsBodySchema = z.object({
     name: z.string(),
     email: z.string().email(),
@@ -10,9 +14,14 @@ export async function clients(request: FastifyRequest, reply: FastifyReply) {
 
   const { name, email } = clientsBodySchema.parse(request.body);
 
-  // Criar o cliente no banco de dados sem hash da senha
+  if (!request.userId) {
+    return reply.status(401).send({ message: "User ID is missing" });
+  }
+
+  console.log("Create Cliente", createClient);
   const createdClient = await prisma.client.create({
     data: {
+      userId: request.userId,
       name,
       email,
     },
@@ -80,6 +89,7 @@ export async function listClients(
   // Buscar todos os clientes
   const clients = await prisma.client.findMany({
     where: {
+      userId: request.userId,
       deleted: false,
     },
   });
@@ -88,18 +98,3 @@ export async function listClients(
     data: clients,
   });
 }
-
-export const getClientData = async (
-  request: FastifyRequest,
-  reply: FastifyReply
-) => {
-  try {
-    const currentClient = request.currentClient;
-    if (!currentClient) {
-      return reply.status(401).send({ message: "Cliente não encontrado" });
-    }
-    return reply.send(currentClient);
-  } catch (error) {
-    return reply.status(500).send({ error: "Erro ao buscarDados do cliente" });
-  }
-};

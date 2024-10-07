@@ -3,7 +3,7 @@ import "dotenv/config";
 import { z } from "zod";
 
 // Carrega as variáveis de ambiente do arquivo .env
-dotenv.config();
+
 
 // Define o esquema de validação das variáveis de ambiente
 const envSchema = z.object({
