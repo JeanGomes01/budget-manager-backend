@@ -4,7 +4,10 @@ import jwt, { JwtPayload } from "jsonwebtoken"; // Certifique-se de que está im
 import { z } from "zod";
 import { prisma } from "../../lib/prisma";
 
-export async function register(request: FastifyRequest, reply: FastifyReply) {
+export async function registerUser(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
   const registerBodySchema = z.object({
     email: z.string().email(),
     password: z.string().min(6),

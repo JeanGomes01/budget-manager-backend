@@ -111,12 +111,10 @@ export async function deleteClient(
     id: z.number(),
   });
 
-  // Delete o cliente no banco de dados sem hash da senha
   const { id } = deleteClientSchema.parse(request.body);
 
   const deletedClient = await prisma.client.delete({
     where: {
-      userId: request.userId,
       id,
     },
   });

@@ -76,7 +76,6 @@ export async function createBudget(
 }
 
 export async function listBudget(request: FastifyRequest, reply: FastifyReply) {
-  // Definindo um schema opcional para o clientId
   const querySchema = z.object({
     clientId: z.number().optional(),
     createdAt: z.date().optional(),
@@ -95,10 +94,16 @@ export async function listBudget(request: FastifyRequest, reply: FastifyReply) {
   }
   const { clientId, createdAt, finalized, budgetOnMaterial } = parseQuery.data;
 
+  // Definindo as condições de filtro
+
   try {
     // Se clientId for fornecido, filtra os orçamentos por cliente
     const budgets = await prisma.budget.findMany({
-      where: clientId ? { clientId, createdAt, finalized } : {}, // Filtro condicional
+      where: {
+        budgetOnMaterial: {
+          some: {},
+        },
+      },
       include: {
         client: true,
         budgetOnMaterial: {

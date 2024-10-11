@@ -48,7 +48,7 @@ model Material {
 model Budget {
   id               Int                @id @default(autoincrement())
   clientId         Int
-  client           Client             @relation(fields: [clientId], references: [id])
+  client           Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
   createdAt        DateTime           @default(now())
   finalized        Boolean            @default(false)
   amount           Float              @default(0)

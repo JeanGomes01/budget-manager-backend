@@ -18,12 +18,16 @@ import {
   listMaterials,
   updateMaterial,
 } from "../http/controllers/material";
-import { deleteUsers, listUsers, register } from "../http/controllers/register";
+import {
+  deleteUsers,
+  listUsers,
+  registerUser,
+} from "../http/controllers/register";
 import { ensureAuthenticated } from "../middleware/authMiddleware";
 import { login } from "./controllers/login";
 export async function authRoutes(app: FastifyInstance) {
   app.post("/login", login);
-  app.post("/register", register);
+  app.post("/register", registerUser);
 }
 
 export async function userRoutes(app: FastifyInstance) {
