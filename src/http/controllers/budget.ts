@@ -2,7 +2,7 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma"; // Certifique-se de que o caminho para o prisma está correto
 
-export async function createBudgetRoutes(
+export async function createBudget(
   request: FastifyRequest,
   reply: FastifyReply
 ) {
@@ -17,7 +17,6 @@ export async function createBudgetRoutes(
   });
 
   const { clientId, materials } = createBudgetSchema.parse(request.body);
-  console.log(`Client ID received: ${clientId}`);
 
   const client = await prisma.client.findUnique({
     where: { id: clientId },
@@ -27,51 +26,62 @@ export async function createBudgetRoutes(
     return reply.status(404).send({ error: "Client not found" });
   }
 
-  let totalValue = 0;
-
-  const budgetMaterials = await Promise.all(
-    materials.map(async ({ materialId, quantity }) => {
-      const material = await prisma.material.findUnique({
-        where: { id: materialId },
-      });
-
-      if (!material) {
-        return reply.status(404).send({ error: "Material not found" });
-      }
-
-      totalValue += material.value * quantity;
-
-      return {
-        materialId: material.id,
-        quantity,
-        priceAtCreation: material.value,
-      };
-    })
-  );
   const newBudget = await prisma.budget.create({
     data: {
       clientId: clientId,
       finalized: false,
-      BudgetMaterial: {
-        create: budgetMaterials.map((bm) => ({
-          materialId: bm.materialId,
-          quantity: bm.quantity,
-          priceAtCreation: bm.priceAtCreation,
+      budgetOnMaterial: {
+        create: materials.map((material) => ({
+          quantity: material.quantity,
+          material: {
+            connect: {
+              id: material.materialId,
+            },
+          },
         })),
       },
     },
     include: {
-      BudgetMaterial: true,
+      client: true,
+      budgetOnMaterial: {
+        include: {
+          material: true,
+        },
+      },
     },
   });
 
-  return reply.status(201).send(newBudget);
+  const totalValue = newBudget.budgetOnMaterial.reduce((amount, material) => {
+    return (amount += material.material.value * material.quantity);
+  }, 0);
+
+  const updatedBudget = await prisma.budget.update({
+    where: {
+      id: clientId,
+    },
+    data: {
+      amount: totalValue,
+    },
+    include: {
+      client: true,
+      budgetOnMaterial: {
+        include: {
+          material: true,
+        },
+      },
+    },
+  });
+
+  return reply.status(201).send(updatedBudget);
 }
 
 export async function listBudget(request: FastifyRequest, reply: FastifyReply) {
   // Definindo um schema opcional para o clientId
   const querySchema = z.object({
     clientId: z.number().optional(),
+    createdAt: z.date().optional(),
+    finalized: z.boolean().optional(),
+    budgetOnMaterial: z.boolean().optional(),
   });
 
   // Fazendo o parse da query
@@ -83,21 +93,117 @@ export async function listBudget(request: FastifyRequest, reply: FastifyReply) {
       details: parseQuery.error.errors,
     });
   }
-
-  const { clientId } = parseQuery.data;
+  const { clientId, createdAt, finalized, budgetOnMaterial } = parseQuery.data;
 
   try {
     // Se clientId for fornecido, filtra os orçamentos por cliente
     const budgets = await prisma.budget.findMany({
-      where: clientId ? { clientId } : {}, // Filtro condicional
-      include: { materials: true }, // Inclui os materiais no retorno
+      where: clientId ? { clientId, createdAt, finalized } : {}, // Filtro condicional
+      include: {
+        client: true,
+        budgetOnMaterial: {
+          include: {
+            material: true,
+          },
+        },
+      },
     });
 
-    return reply.send(budgets);
+    return reply.status(200).send({
+      message: "O orçamento foi listado com sucesso !!!",
+      data: budgets,
+    });
   } catch (error) {
     return reply.status(500).send({
       error: "Failed to fetch budgets",
       details: (error as Error).message,
     });
   }
+}
+
+export async function updateBudget(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  const updateBudgetSchema = z.object({
+    id: z.number(),
+  });
+
+  const { id } = updateBudgetSchema.parse(request.body);
+
+  const isFinalized = (
+    await prisma.budget.findUnique({
+      where: {
+        id,
+      },
+    })
+  )?.finalized;
+
+  if (isFinalized === true) {
+    return reply.status(500).send({
+      message: "O budget já foi finalizado!",
+    });
+  }
+
+  const listMaterials = await prisma.budgetOnMaterial.findMany({
+    where: {
+      budgetId: id,
+    },
+    include: {
+      material: true,
+    },
+  });
+
+  const totalValue = listMaterials.reduce((amount, material) => {
+    return (amount += material.material.value * material.quantity);
+  }, 0);
+
+  const updatedBudget = await prisma.budget.update({
+    where: {
+      id,
+    },
+    data: {
+      amount: totalValue,
+    },
+    include: {
+      client: true,
+      budgetOnMaterial: {
+        include: {
+          material: true,
+        },
+      },
+    },
+  });
+
+  return reply.status(200).send({
+    message: "O orçamento foi atualizado com sucesso !!",
+    data: updatedBudget,
+  });
+}
+
+export async function finishBudget(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  const finishBudgetSchema = z.object({
+    id: z.number(),
+    finalized: z.boolean(),
+  });
+
+  const { id, finalized } = finishBudgetSchema.parse(request.body);
+
+  const finishedBudget = await prisma.budget.update({
+    where: {
+      id,
+    },
+    data: {
+      finalized: true,
+    },
+  });
+  return reply.status(200).send({
+    message: {
+      message: "O orçamento foi finalizado com sucesso !",
+    },
+    data: finishedBudget,
+  });
 }

@@ -46,7 +46,6 @@ export async function listUsers(request: FastifyRequest, reply: FastifyReply) {
   const token = request.headers["authorization"]?.split(" ")[1];
 
   // Log para verificar o token recebido
-  console.log("Token recebido:", token);
 
   if (!token) {
     return reply.status(401).send({ message: "Unauthorized" });
@@ -57,7 +56,6 @@ export async function listUsers(request: FastifyRequest, reply: FastifyReply) {
   try {
     // Verificar e decodificar o token
     const decoded = jwt.verify(token, jwtSecret) as JwtPayload;
-    console.log("Token decodificado:", decoded); // Log do token decodificado
 
     // Retornar todos os usuários
     const users = await prisma.user.findMany();

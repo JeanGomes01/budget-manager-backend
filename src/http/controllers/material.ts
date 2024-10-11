@@ -42,6 +42,7 @@ export async function updateMaterial(
 
   const updatedMaterial = await prisma.material.update({
     where: {
+      userId: request.userId,
       id,
     },
     data: {
@@ -66,6 +67,7 @@ export async function deleteMaterial(
 
   const deletedMaterial = await prisma.material.delete({
     where: {
+      userId: request.userId,
       id,
     },
   });
@@ -97,19 +99,3 @@ export async function listMaterials(
     data: materials,
   });
 }
-
-export const getMaterialData = async (
-  request: FastifyRequest,
-  reply: FastifyReply
-) => {
-  try {
-    if (!request.userId) {
-      return reply.status(401).send({ message: "Material não encontrado" });
-    }
-    return reply.send(request.userId);
-  } catch (error) {
-    return reply
-      .status(500)
-      .send({ error: "Erro ao buscar dados do material" });
-  }
-};

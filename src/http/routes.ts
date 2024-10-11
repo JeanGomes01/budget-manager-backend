@@ -1,6 +1,11 @@
 // src/http/routes.ts
 import { FastifyInstance } from "fastify";
-import { createBudgetRoutes, listBudget } from "../http/controllers/budget";
+import {
+  createBudget,
+  finishBudget,
+  listBudget,
+  updateBudget,
+} from "../http/controllers/budget";
 import {
   createClient,
   deleteClient,
@@ -16,16 +21,15 @@ import {
 import { deleteUsers, listUsers, register } from "../http/controllers/register";
 import { ensureAuthenticated } from "../middleware/authMiddleware";
 import { login } from "./controllers/login";
+export async function authRoutes(app: FastifyInstance) {
+  app.post("/login", login);
+  app.post("/register", register);
+}
 
 export async function userRoutes(app: FastifyInstance) {
   app.addHook("preHandler", ensureAuthenticated);
   app.get("/users", listUsers);
   app.delete("/users", deleteUsers);
-}
-
-export async function authRoutes(app: FastifyInstance) {
-  app.post("/login", login);
-  app.post("/register", register);
 }
 
 export async function clientRoutes(app: FastifyInstance) {
@@ -51,6 +55,9 @@ export async function materialRoutes(app: FastifyInstance) {
 }
 
 export async function budgetRoutes(app: FastifyInstance) {
-  app.post("/budgets", createBudgetRoutes);
+  app.addHook("preHandler", ensureAuthenticated);
+  app.post("/budgets", createBudget);
   app.get("/budgets", listBudget);
+  app.put("/budgets", updateBudget);
+  app.patch("/budgets", finishBudget);
 }

@@ -35,36 +35,32 @@ model Client {
 }
 
 model Material {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  userId    Int
-  value     Float
-  createdAt DateTime @default(now())
-  deleted   Boolean  @default(false)
-  Budget    Budget?  @relation(fields: [budgetId], references: [id])
-  budgetId  Int?
-
-  BudgetMaterial BudgetMaterial[]
-
-  user User @relation(fields: [userId], references: [id])
+  id               Int                @id @default(autoincrement())
+  name             String             @unique
+  userId           Int
+  value            Float
+  createdAt        DateTime           @default(now())
+  deleted          Boolean            @default(false)
+  budgetOnMaterial BudgetOnMaterial[]
+  user             User               @relation(fields: [userId], references: [id])
 }
 
 model Budget {
-  id             Int              @id @default(autoincrement())
-  clientId       Int
-  client         Client           @relation(fields: [clientId], references: [id])
-  materials      Material[]
-  createdAt      DateTime         @default(now())
-  finalized      Boolean          @default(false)
-  BudgetMaterial BudgetMaterial[]
+  id               Int                @id @default(autoincrement())
+  clientId         Int
+  client           Client             @relation(fields: [clientId], references: [id])
+  createdAt        DateTime           @default(now())
+  finalized        Boolean            @default(false)
+  amount           Float              @default(0)
+  budgetOnMaterial BudgetOnMaterial[]
 }
 
-model BudgetMaterial {
-  id              Int      @id @default(autoincrement())
-  budgetId        Int
-  materialId      Int
-  budget          Budget   @relation(fields: [budgetId], references: [id])
-  material        Material @relation(fields: [materialId], references: [id])
-  quantity        Int
-  priceAtCreation Float
+model BudgetOnMaterial {
+  budgetId   Int
+  materialId Int
+  budget     Budget   @relation(fields: [budgetId], references: [id])
+  material   Material @relation(fields: [materialId], references: [id])
+  quantity   Int      @default(0)
+
+  @@id([budgetId, materialId])
 }

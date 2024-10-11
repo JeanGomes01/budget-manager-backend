@@ -21,9 +21,6 @@ function ensureAuthenticated(
     ) as JWTUserPayload;
 
     request.userId = decodedToken.userId;
-    console.log("USER ID", request.userId);
-
-    console.log(decodedToken);
   } catch (error) {
     reply.code(401).send({ Error: "Token invalid" });
   }
