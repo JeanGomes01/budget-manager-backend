@@ -51,6 +51,7 @@ model Budget {
   client           Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
   createdAt        DateTime           @default(now())
   finalized        Boolean            @default(false)
+  // finalizedAt      DateTime           @default(now())
   amount           Float              @default(0)
   budgetOnMaterial BudgetOnMaterial[]
 }

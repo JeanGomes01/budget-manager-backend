@@ -57,7 +57,7 @@ export async function createBudget(
 
   const updatedBudget = await prisma.budget.update({
     where: {
-      id: clientId,
+      id: newBudget.id,
     },
     data: {
       amount: totalValue,
@@ -195,7 +195,7 @@ export async function finishBudget(
     finalized: z.boolean(),
   });
 
-  const { id, finalized } = finishBudgetSchema.parse(request.body);
+  const { id } = finishBudgetSchema.parse(request.body);
 
   const finishedBudget = await prisma.budget.update({
     where: {
